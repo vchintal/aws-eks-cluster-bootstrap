@@ -11,27 +11,14 @@ provider "docker" {
 }
 
 module "lambda_function" {
-  source             = "terraform-aws-modules/lambda/aws"
-  function_name      = "${local.name}-lambda"
-  create_package     = false
-  image_uri          = module.docker_image.image_uri
-  package_type       = "Image"
-  timeout            = 20
-  attach_policy_json = true
-  policy_json        = <<-EOT
-    {
-        "Version": "2012-10-17",
-        "Statement": [
-            {
-                "Effect": "Allow",
-                "Action": [
-                    "eks:*"
-                ],
-                "Resource": ["*"]
-            }
-        ]
-    }
-  EOT
+  source         = "terraform-aws-modules/lambda/aws"
+  function_name  = "${local.name}-lambda"
+  create_package = false
+  image_uri      = module.docker_image.image_uri
+  package_type   = "Image"
+  timeout        = 20
+  attach_policy  = true
+  policy         = resource.aws_iam_policy.eks_ro_access_policy.arn
 
   memory_size = 2048
 
@@ -51,4 +38,30 @@ module "docker_image" {
     CLUSTER_NAME = var.eks_cluster_name
     REGION       = var.aws_region
   }
+}
+
+resource "aws_iam_policy" "eks_ro_access_policy" {
+  name        = "EKSReadOnlyAccess"
+  path        = "/"
+  description = "EKS read-only access policy"
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = [
+          "eks:DescribeCluster",
+          "eks:ListClusters"
+        ]
+        Effect   = "Allow"
+        Resource = module.eks.cluster_arn
+      },
+    ]
+  })
+}
+
+resource "aws_lambda_invocation" "this" {
+  function_name = module.lambda_function.lambda_function_name
+
+  input = jsonencode({})
 }

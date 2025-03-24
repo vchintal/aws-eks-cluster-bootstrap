@@ -16,10 +16,10 @@ module "eks" {
       principal_arn = module.lambda_function.lambda_role_arn
       policy_associations = {
         cluster-admin-policy = {
-          policy_arn = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
+          policy_arn = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSEditPolicy"
           access_scope = {
-            namespaces = []
-            type       = "cluster"
+            namespaces = ["default"]
+            type       = "namespace"
           }
         }
       }
